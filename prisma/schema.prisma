@@ -1,0 +1,213 @@
+// Prisma Database Schema for AiSpa Bangladeshi Localized Auth System & Admin Studio
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  STYLIST
+  MANAGER
+  ADMIN
+}
+
+enum Language {
+  en
+  bn
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  RESCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum OmniChannel {
+  WEBSITE
+  WHATSAPP
+  MESSENGER
+}
+
+model User {
+  id            String         @id @default(cuid())
+  phone         String?        @unique // E.164 format: +8801XXXXXXXXX
+  email         String?        @unique
+  name          String?
+  avatar        String?
+  role          Role           @default(CLIENT)
+  preferredLang Language       @default(en)
+  phoneVerified Boolean        @default(false)
+  emailVerified DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  otpAttempts   OTPAttempt[]
+  bookings      BookingRequest[]
+  omniMessages  OmniMessage[]
+
+  @@map("users")
+}
+
+model OTPAttempt {
+  id            String   @id @default(cuid())
+  phone         String   // +8801XXXXXXXXX
+  otpHash       String   // SHA-256 Hashed OTP code
+  expiresAt     DateTime // Strict 3-minute expiration
+  attemptsCount Int      @default(0)
+  isVerified    Boolean  @default(false)
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([phone, isVerified])
+  @@index([expiresAt])
+  @@map("otp_attempts")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String  // "oauth"
+  provider          String  // "google" | "facebook"
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Package {
+  id            String   @id @default(cuid())
+  title         String
+  titleBn       String?
+  description   String   @db.Text
+  descriptionBn String?  @db.Text
+  bdtPrice      Float    // Price in Bangladeshi Taka (৳)
+  bdtPromoPrice Float?   // Promotional Discount Price in BDT
+  durationMins  Int      // Duration estimate in minutes
+  isActive      Boolean  @default(true)
+  isPromotional Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  services      PackageService[]
+
+  @@map("packages")
+}
+
+model PackageService {
+  id        String   @id @default(cuid())
+  packageId String
+  name      String
+  duration  Int
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@map("package_services")
+}
+
+model StylistShift {
+  id             String   @id @default(cuid())
+  stylistName    String
+  date           String   // YYYY-MM-DD
+  startTime      String   // HH:MM
+  endTime        String   // HH:MM
+  isBlocked      Boolean  @default(false)
+  overrideReason String?
+  createdAt      DateTime @default(now())
+
+  @@map("stylist_shifts")
+}
+
+model EmergencyNotice {
+  id             String   @id @default(cuid())
+  title          String
+  titleBn        String?
+  message        String   @db.Text
+  messageBn      String?  @db.Text
+  priorityLevel  String   @default("CRITICAL") // "CRITICAL" | "INFO"
+  isGlobalActive Boolean  @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+
+  @@map("emergency_notices")
+}
+
+model BookingRequest {
+  id               String        @id @default(cuid())
+  customerName     String
+  customerPhone    String        // +8801XXXXXXXXX
+  serviceTitle     String
+  bdtAmount        Float
+  appointmentTime  DateTime
+  status           BookingStatus @default(PENDING)
+  channel          OmniChannel   @default(WEBSITE)
+  notes            String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  userId           String?
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("booking_requests")
+}
+
+model OmniMessage {
+  id           String      @id @default(cuid())
+  senderId     String      // WhatsApp Phone or Facebook PSID or Web Session
+  customerName String
+  channel      OmniChannel
+  text         String      @db.Text
+  isFromAdmin  Boolean     @default(false)
+  isRead       Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  userId       String?
+  user         User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("omni_messages")
+}
+
+model LocalizedTranslation {
+  id        String   @id @default(cuid())
+  key       String   // e.g. "service.hydro_facial.description"
+  locale    Language // "en" | "bn"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, locale])
+  @@map("localized_translations")
+}

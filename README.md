@@ -182,7 +182,7 @@ PAGE_ACCESS_TOKEN="YOUR_FACEBOOK_PAGE_ACCESS_TOKEN"
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/aispa.git
+git clone https://github.com/proffesergio/aispa.git
 cd aispa
 
 # Install dependencies
@@ -241,4 +241,3 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <p align="center">
   Crafted with ❤️ for Bangladesh's Beauty & Wellness Industry.
 </p>
-# aispa
