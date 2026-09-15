@@ -18,7 +18,9 @@ export const adminRegisterSchema = z.object({
     .min(6, { message: "Password must be at least 6 characters." }),
   adminKey: z
     .string()
-    .min(1, { message: "Admin Secret Passkey is required to register as salon owner." }),
+    .min(1, { message: "Admin Secret Passkey is required to register as salon owner." })
+    .optional(),
+  adminSecretKey: z.string().optional(),
   role: z.enum(["ADMIN", "MANAGER"]).default("ADMIN"),
 });
 
